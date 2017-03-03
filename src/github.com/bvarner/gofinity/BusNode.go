@@ -1,4 +1,4 @@
-package github.com/bvarner/gofinity
+package gofinity
 
 import (
 	"errors"
