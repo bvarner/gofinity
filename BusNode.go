@@ -7,7 +7,7 @@ import (
 )
 
 // Defines a callback for Bus Probing.
-type onFrameReceived func(*Frame)
+type OnFrameReceived func(*Frame)
 
 // Constants for BusNode.status
 const (
@@ -20,7 +20,7 @@ const (
 type BusNode struct {
 	waitGroup   sync.WaitGroup
 	transceiver BusTransceiver
-	probes      []onFrameReceived
+	probes      []OnFrameReceived
 	status      uint8
 }
 
@@ -28,12 +28,16 @@ type BusNode struct {
 func NewBusNode(transceiver BusTransceiver) (*BusNode) {
 	busNode := &BusNode{
 		transceiver: transceiver,
-		probes:      []onFrameReceived{},
+		probes:      []OnFrameReceived{},
 		waitGroup:   sync.WaitGroup{},
 		status:      READY,
 	}
 
 	return busNode
+}
+
+func (busNode *BusNode) Probe(received OnFrameReceived) {
+	busNode.probes = append(busNode.probes, received)
 }
 
 // Internal read loop for reading Frames from the transceiver.
@@ -43,7 +47,7 @@ func (busNode *BusNode) readLoop() {
 	defer busNode.waitGroup.Done()
 
 	frameBuf := []byte{}
-	readBuf := make([]byte, 1024)
+	readBuf := make([]byte, 256)
 
 	for busNode.status == RUNNING {
 		// If the transceiver isn't open, reset the framebuffer and (re)open.
@@ -53,20 +57,11 @@ func (busNode *BusNode) readLoop() {
 		}
 
 		// Try to read some bytes.
-		n, err := busNode.transceiver.Read(readBuf)
-		if n == 0 || err != nil {
-			log.Printf("error reading from %s: %s", busNode.transceiver, err.Error())
-			if busNode.transceiver.IsOpen() {
-				busNode.transceiver.Close()
-			}
-			// Next trip through the loop will re-open the stream.
-			continue
-		}
+		n, readErr := busNode.transceiver.Read(readBuf)
 
 		// Append to the frame buffer the bytes we just read.
 		frameBuf = append(frameBuf, readBuf[:n]...)
 
-		//
 		for {
 			// Make sure we have at least a full header.
 			if len(frameBuf) < 10 {
@@ -95,6 +90,11 @@ func (busNode *BusNode) readLoop() {
 				// Advance one byte, try again.
 				frameBuf = frameBuf[:copy(frameBuf, frameBuf[1:])]
 			}
+		}
+
+		if readErr != nil {
+			log.Warn("Erorr reading : ", readErr)
+			busNode.transceiver.Close()
 		}
 	}
 }

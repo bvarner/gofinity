@@ -5,6 +5,7 @@ import (
 	"github.com/tarm/serial"
 	"os"
 	"time"
+	log "github.com/Sirupsen/logrus"
 )
 
 // BusTransceiver abstracts a ReadWriteCloser and the functions expected by BusNode for opening / closing streams.
@@ -34,7 +35,6 @@ func NewFileBusReplayer(file string) (*FileBusReplayer) {
 	return &FileBusReplayer{fileName: file}
 }
 
-
 func (st *SerialBusTransceiver) Read(p []byte) (n int, err error) {
 	return st.port.Read(p)
 }
@@ -63,7 +63,6 @@ func (st *SerialBusTransceiver) IsOpen() bool {
 	return st.port != nil
 }
 
-
 func (fb *FileBusReplayer) Read(p []byte) (n int, err error) {
 	return fb.file.Read(p)
 }
@@ -81,8 +80,8 @@ func (fb *FileBusReplayer) Close() error {
 
 func (fb *FileBusReplayer) Open() error {
 	var err error
-	fb.file, err = os.OpenFile(fb.fileName, os.O_RDWR, 0666)
-	_, err = fb.file.Seek(0, io.SeekStart)
+	log.Info("Attempting to Open %s", fb.fileName)
+	fb.file, err = os.Open(fb.fileName)
 	if err != nil {
 		fb.file = nil
 	}

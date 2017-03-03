@@ -6,6 +6,7 @@ import (
 	"github.com/bvarner/gofinity"
 	"os"
 	"time"
+	log "github.com/Sirupsen/logrus"
 )
 
 func main() {
@@ -31,9 +32,20 @@ func main() {
 		os.Exit(1)
 	}
 
-	bus := gofinity.NewBusNode(transceiver)
+	err := transceiver.Open()
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	bus.Start()
+	bus := gofinity.NewBusNode(transceiver)
+	bus.Probe(func(frame *gofinity.Frame) {
+		log.Info("Got a frame!")
+	})
+
+	err = bus.Start()
+	if err != nil {
+		log.Fatal(err)
+	}
 	defer bus.Shutdown()
 
 	for transceiver.IsOpen() {
