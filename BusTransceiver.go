@@ -20,13 +20,19 @@ type SerialBusTransceiver struct {
 	port   *serial.Port
 }
 
+func NewSerialBusTransceiver(device string) (*SerialBusTransceiver) {
+	return &SerialBusTransceiver{device: device}
+}
+
 // FileBusReplayer is a BusTransceiver that turns writes into 'no-ops', but allows for probing previously recorded bus logs.
 type FileBusReplayer struct {
 	fileName string
 	file     *os.File
 }
 
-
+func NewFileBusReplayer(file string) (*FileBusReplayer) {
+	return &FileBusReplayer{fileName: file}
+}
 
 
 func (st *SerialBusTransceiver) Read(p []byte) (n int, err error) {
