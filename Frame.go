@@ -12,7 +12,8 @@ type Header struct {
 	Destination uint16
 	Source      uint16
 	Length      uint8
-	reserved    uint16 // Not sure what these two bytes are yet
+	reserved1    uint8 // Not sure what these two bytes are yet
+	reserved2    uint8
 	Operation   uint8
 }
 
@@ -20,7 +21,7 @@ type Header struct {
 type Frame struct {
 	header   Header
 	data     []byte
-	checksum []byte
+	checksum uint16
 }
 
 // Decodes and creates a new Frame from the given buffer.
@@ -60,12 +61,13 @@ func NewFrame(buf []byte) (*Frame, error) {
 		header: Header{
 			Destination: binary.LittleEndian.Uint16(buf[0:2]),
 			Source:      binary.LittleEndian.Uint16(buf[2:4]),
-			Length:      buf[4],
-			reserved:    binary.LittleEndian.Uint16(buf[5:7]),
-			Operation:   buf[7],
+			Length:      buf[4], // uint8
+			reserved1:   buf[5], // Not sure what this byte and the next are.
+			reserved2:   buf[6],
+			Operation:   buf[7], // uint8
 		},
 		data:     buf[8:headerDataLength],
-		checksum: buf[headerDataLength:],
+		checksum: txChecksum, // uint16
 	}, nil
 }
 
