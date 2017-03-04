@@ -122,8 +122,8 @@ func (busNode *BusNode) Start() error {
 // Stops the BusNode's I/O loops.
 // Blocks until all threads running for I/O terminate.
 func (busNode *BusNode) Shutdown() error {
-	if busNode.status != RUNNING {
-		return errors.New("BusNode not 'RUNNING'.")
+	if busNode.status != RUNNING || busNode.status != INVALID {
+		return errors.New("BusNode not 'RUNNING' or 'INVALID'.")
 	}
 	busNode.status = STOPPING
 	busNode.waitGroup.Wait()
