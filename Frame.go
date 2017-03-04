@@ -3,8 +3,8 @@ package gofinity
 import (
 	"github.com/npat-efault/crc16"
 	"errors"
-	"bytes"
 	"encoding/binary"
+	log "github.com/Sirupsen/logrus"
 )
 
 // A Frame Header
@@ -37,21 +37,31 @@ func NewFrame(buf []byte) (*Frame, error) {
 		return nil, errors.New("No Frame Content")
 	}
 
+	// End of the buffer is a 2 byte checksum.
 	headerDataLength := len(buf) - 2 // Length of Header + Data - Checksum
 
-	// Calculate the checksum and compare...
-	// TODO: See comment in checksum() function below.
-	bufChecksum := checksum(buf[:headerDataLength])
-	if !bytes.Equal(bufChecksum, buf[headerDataLength:]) {
+	// Calculate a checksum from the bytes we've received.
+	rxChecksum := crc16.Checksum(crcConfig, buf[:headerDataLength])
+
+	// Read the checksum from the buffer
+	txChecksum := binary.LittleEndian.Uint16(buf[headerDataLength:])
+
+	if rxChecksum != txChecksum {
+		log.Info("Checksum Mismatch:", rxChecksum, "!=", txChecksum)
 		return nil, errors.New("Frame Checksum mismatch")
 	}
 
+	log.Info("BE Source: " , binary.BigEndian.Uint16(buf[2:4]), " Destination: ", binary.BigEndian.Uint16(buf[0:2]))
+	log.Info("LE Source: " , binary.LittleEndian.Uint16(buf[2:4]), " Destination: ", binary.LittleEndian.Uint16(buf[0:2]))
+
+
+	// Checksum matches. Construct the frame.
 	return &Frame{
 		header: Header{
-			Destination: binary.BigEndian.Uint16(buf[0:2]),
-			Source:      binary.BigEndian.Uint16(buf[2:4]),
+			Destination: binary.LittleEndian.Uint16(buf[0:2]),
+			Source:      binary.LittleEndian.Uint16(buf[2:4]),
 			Length:      buf[4],
-			reserved:    binary.BigEndian.Uint16(buf[5:7]),
+			reserved:    binary.LittleEndian.Uint16(buf[5:7]),
 			Operation:   buf[7],
 		},
 		data:     buf[8:headerDataLength],
@@ -66,12 +76,3 @@ var crcConfig = &crc16.Conf{
 	IniVal: 0x0, FinVal: 0x0,
 	BigEnd: false,
 }
-
-// Unexported function to calculate checksums.
-func checksum(b []byte) []byte {
-	// TODO: Evaluate if we can cut this down to just a Checksum(crcConfig, b) and compare the resultant uint16.
-	s := crc16.New(crcConfig)
-	s.Write(b)
-	return s.Sum(nil)
-}
-
