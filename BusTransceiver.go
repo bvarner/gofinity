@@ -13,6 +13,7 @@ type BusTransceiver interface {
 	io.ReadWriteCloser
 	Open() error
 	IsOpen() bool
+	Valid() bool
 }
 
 // SerialBusTransceiver is a BusTransceiver that operations on serial ports. Surprise!
@@ -23,16 +24,6 @@ type SerialBusTransceiver struct {
 
 func NewSerialBusTransceiver(device string) (*SerialBusTransceiver) {
 	return &SerialBusTransceiver{device: device}
-}
-
-// FileBusReplayer is a BusTransceiver that turns writes into 'no-ops', but allows for probing previously recorded bus logs.
-type FileBusReplayer struct {
-	fileName string
-	file     *os.File
-}
-
-func NewFileBusReplayer(file string) (*FileBusReplayer) {
-	return &FileBusReplayer{fileName: file}
 }
 
 func (st *SerialBusTransceiver) Read(p []byte) (n int, err error) {
@@ -63,8 +54,28 @@ func (st *SerialBusTransceiver) IsOpen() bool {
 	return st.port != nil
 }
 
+func (st *SerialBusTransceiver) Valid() bool {
+	return true
+}
+
+// FileBusReplayer is a BusTransceiver that turns writes into 'no-ops', but allows for probing previously recorded bus logs.
+// if a FileBusReplayer hits an EOF, it's considered no longer valid.
+type FileBusReplayer struct {
+	fileName string
+	file     *os.File
+	atEOF    bool
+}
+
+func NewFileBusReplayer(file string) (*FileBusReplayer) {
+	return &FileBusReplayer{fileName: file, file: nil, atEOF: false}
+}
+
 func (fb *FileBusReplayer) Read(p []byte) (n int, err error) {
-	return fb.file.Read(p)
+	n, err = fb.file.Read(p)
+	if err == io.EOF {
+		fb.atEOF = true
+	}
+	return n,err
 }
 
 func (fb *FileBusReplayer) Write(p []byte) (n int, err error) {
@@ -90,4 +101,8 @@ func (fb *FileBusReplayer) Open() error {
 
 func (fb *FileBusReplayer) IsOpen() bool {
 	return fb.file != nil
+}
+
+func (fb *FileBusReplayer) Valid() bool {
+	return !fb.atEOF
 }

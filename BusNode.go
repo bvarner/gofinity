@@ -14,6 +14,7 @@ const (
 	READY    = uint8(0x00)
 	RUNNING  = uint8(0x01)
 	STOPPING = uint8(0x02)
+	INVALID  = uint8(0x03)
 )
 
 // BusNode defines frame-based interactions atop a BusTransceiver
@@ -49,7 +50,8 @@ func (busNode *BusNode) readLoop() {
 	frameBuf := []byte{}
 	readBuf := make([]byte, 256)
 
-	for busNode.status == RUNNING {
+	// If the transceiver is no longer valid, bail.
+	for busNode.status == RUNNING && busNode.transceiver.Valid() {
 		// If the transceiver isn't open, reset the framebuffer and (re)open.
 		if !busNode.transceiver.IsOpen() {
 			frameBuf = []byte{}
@@ -96,6 +98,11 @@ func (busNode *BusNode) readLoop() {
 			log.Warn("Erorr reading : ", readErr)
 			busNode.transceiver.Close()
 		}
+	}
+
+	if !busNode.transceiver.Valid() {
+		busNode.status = INVALID
+		log.Info("Transceiver no longer valid for reading.")
 	}
 }
 
