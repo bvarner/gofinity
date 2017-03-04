@@ -5,6 +5,7 @@ import (
 	"errors"
 	"encoding/binary"
 	log "github.com/Sirupsen/logrus"
+	"fmt"
 )
 
 // A Frame Header
@@ -52,9 +53,8 @@ func NewFrame(buf []byte) (*Frame, error) {
 		return nil, errors.New("Frame Checksum mismatch")
 	}
 
-	log.Info("BE Source: " , binary.BigEndian.Uint16(buf[2:4]), " Destination: ", binary.BigEndian.Uint16(buf[0:2]))
-	log.Info("LE Source: " , binary.LittleEndian.Uint16(buf[2:4]), " Destination: ", binary.LittleEndian.Uint16(buf[0:2]))
-
+	log.Info(fmt.Sprintf("BE Source: 0x%x Destination: 0x%x" , binary.BigEndian.Uint16(buf[2:4]), binary.BigEndian.Uint16(buf[0:2])))
+	log.Info(fmt.Sprintf("LE Source: 0x%x Destination: 0x%x" , binary.LittleEndian.Uint16(buf[2:4]), binary.LittleEndian.Uint16(buf[0:2])))
 
 	// Checksum matches. Construct the frame.
 	return &Frame{
