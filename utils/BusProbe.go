@@ -2,15 +2,14 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"github.com/bvarner/gofinity"
-	"os"
 	"time"
 	log "github.com/Sirupsen/logrus"
 )
 
 func main() {
-	fmt.Println("Starting up BusProbe.")
+	log.SetLevel(log.DebugLevel)
+	log.Info("Starting up BusProbe.")
 
 	serialPort := flag.String("s", "", "path to serial port device")
 	replayFile := flag.String("f", "", "binary capture file to replay")
@@ -27,9 +26,8 @@ func main() {
 	}
 
 	if transceiver == nil {
-		fmt.Println("You must specify either -s (serial device) or -f (replay flie)")
-		flag.PrintDefaults()
-		os.Exit(1)
+		defer flag.PrintDefaults()
+		log.Fatal("You must specify either -s (serial device) or -f (replay flie)")
 	}
 
 	err := transceiver.Open()
@@ -49,9 +47,9 @@ func main() {
 	defer bus.Shutdown()
 
 	for transceiver.IsOpen() {
-		fmt.Println("Sleeping 5 seconds for transceiver isOpen test...")
+		log.Debug("Sleeping 5 seconds for transceiver isOpen test...")
 		time.Sleep(time.Second * 5)
 	}
 
-	fmt.Println("Transceiver closed")
+	log.Info("Transceiver closed")
 }

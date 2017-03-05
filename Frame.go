@@ -9,11 +9,16 @@ import (
 	"strconv"
 )
 
+const ACK = 0x06
+const READ_REQUEST = 0x0b
+const WRITE_REQUEST = 0x0c
+const ERROR = 0x15
+
 var Operations = map[uint8]string{
-	0x06: "ACK",
-	0x0b: "READ_REQUEST",
-	0x0c: "WRITE_REQUEST",
-	0x15: "ERROR",
+	ACK:           "ACK",
+	READ_REQUEST:  "READ_REQUEST",
+	WRITE_REQUEST: "WRITE_REQUEST",
+	ERROR:         "ERROR",
 }
 
 // A Frame Header
@@ -28,8 +33,8 @@ type Header struct {
 
 // A Communication Frame (message)
 type Frame struct {
-	header   Header
-	data     []byte
+	Header   Header
+	payload  []byte
 	checksum uint16
 }
 
@@ -63,7 +68,7 @@ func NewFrame(buf []byte) (*Frame, error) {
 
 	// Checksum matches. Construct the frame.
 	return &Frame{
-		header: Header{
+		Header: Header{
 			Destination: binary.LittleEndian.Uint16(buf[0:2]),
 			Source:      binary.LittleEndian.Uint16(buf[2:4]),
 			Length:      buf[4], // uint8
@@ -71,9 +76,28 @@ func NewFrame(buf []byte) (*Frame, error) {
 			reserved2:   buf[6],
 			Operation:   buf[7], // uint8
 		},
-		data:     buf[8:headerDataLength],
+		payload:  buf[8:headerDataLength],
 		checksum: txChecksum, // uint16
 	}, nil
+}
+
+func NewProbeDeviceFrame(source uint16, destination uint16, exportIdx uint16, offset uint8) (*Frame) {
+	probeFrame := Frame{
+		Header: Header{
+			Destination: destination,
+			Source:      source,
+			Operation:   READ_REQUEST,
+		},
+	}
+
+	// Put together the payload.
+	probeFrame.payload = make([]byte, 3)
+
+	// Export index, first entry.
+	binary.BigEndian.PutUint16(probeFrame.payload, exportIdx)
+	probeFrame.payload[2] = offset
+
+	return &probeFrame
 }
 
 func (header *Header) String() string {
@@ -85,8 +109,46 @@ func (header *Header) String() string {
 
 }
 
-func (f *Frame) String() string {
-	return fmt.Sprintf("%s : %x", f.header.String(), f.data)
+func (frame *Frame) Encode() ([]byte) {
+	frame.Header.Length = uint8(len(frame.payload))
+
+	// Create a buffer big enough.
+	buf := make([]byte, frame.Header.Length+8) // Header length in bytes.
+
+	binary.LittleEndian.PutUint16(buf[0:2], frame.Header.Destination)
+	binary.LittleEndian.PutUint16(buf[2:4], frame.Header.Source)
+	buf[4] = frame.Header.Length
+	buf[5] = 0x00
+	buf[6] = 0x00
+	buf[7] = frame.Header.Operation
+	copy(buf[8:], frame.payload)
+
+	// Calculate the CRC.
+	crc := crc16.Checksum(crcConfig, buf)
+
+	// Make a new buffer big enough to hold the output + crc
+	outbuf := make([]byte, len(buf)+2)
+	copy(outbuf, buf)
+	binary.LittleEndian.PutUint16(outbuf[len(buf):], crc)
+
+	return outbuf
+}
+
+func (frame *Frame) String() string {
+	return fmt.Sprintf("%s : %s", frame.Header.String(), frame.Payload())
+}
+
+func (frame *Frame) Payload() string {
+	if len(frame.payload) == 1 && frame.payload[0] == 0x00 {
+		return ""
+	} else {
+		expStruct := binary.BigEndian.Uint16(frame.payload[0:2]) // Index of array of pointers, pointing to memory addresses of structures containing data type, name, and count of similar in-memory structs.
+		expIdx := frame.payload[2]                               // Resolve Pointer to struct. Now, what index are we interested in?
+
+		log.Debug(fmt.Sprintf("%x", frame.payload))
+
+		return fmt.Sprintf("exports[%d].data[%d]", expStruct, expIdx)
+	}
 }
 
 // Global Checksum configuration.

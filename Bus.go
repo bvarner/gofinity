@@ -48,7 +48,7 @@ func (bus *Bus) readLoop() {
 	defer bus.waitGroup.Done()
 
 	frameBuf := []byte{}
-	readBuf := make([]byte, 256)
+	readBuf := make([]byte, 1024)
 
 	// If the transceiver is no longer valid, bail.
 	for bus.status == RUNNING && bus.transceiver.Valid() {
