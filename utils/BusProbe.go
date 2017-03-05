@@ -39,7 +39,7 @@ func main() {
 
 	bus := gofinity.NewBus(transceiver)
 	bus.Probe(func(frame *gofinity.Frame) {
-		log.Info("Got a frame!")
+		log.Info(frame)
 	})
 
 	err = bus.Start()

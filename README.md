@@ -44,10 +44,38 @@ the opposite of trying to talk me out of it.
 
 Challenge Accepted.
 
-## Hardware
+
+# Protocol / Device Information
+
+## Physical ABCD Bus
+**Half Duplex RS-485 + 24VAC = ABCD**
+
+Inside Carrier Infinity / Bryant Evolution systems there's a set of screw terminals labeled, "ABCD". These are the very 
+wires which connect the thermostat, air handler, and any outdoor units (heat pump, air conditioner).
+
+The A & B terminals carry RS-485 serial data at 38400, 8n1. The C & D Terminals provide 24VAC.
+
+## RS-485 Hardware
 You'll need some way to communicate with the RS-485 bus of the ABCD connectors on your HVAC system.
 Instead of dealing with the shortcomings of common USB transceivers and looking more toward my final goals of embedded 
 custom hardware & software, I designed and built [pi485](https://github.com/bvarner/pi485), a TTL Serial to RS-485 
 transceiver for Arduino and Raspberry Pi type devices. These are not difficult to make, and a full BOM will cost about
 $15 USD (2017 prices) in single quantities. You could probably do it for less than that if you have a bunch of things in
 your 'junk drawer'.
+
+Or, you could go the RS-485 -> USB Converter route. Any of these can work.
+
+Beware hardware that doesn't have a way to disable termination resistors, as that 
+will cause issues with your ABCD bus. Also, devices which don't properly bias the AB lines with the DC supply voltage 
+and 'ground', may have issues as well. These issues (and I wanted to use the UART rather than USB) were why I created 
+[pi485](https://github.com/bvarner/pi485).
+
+## Protocol Basics
+
+
+### Bootup Sequence
+
+
+### 
+
+

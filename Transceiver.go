@@ -91,7 +91,7 @@ func (fb *FileReplayer) Close() error {
 
 func (fb *FileReplayer) Open() error {
 	var err error
-	log.Info("Attempting to Open %s", fb.fileName)
+	log.Debug("Attempting to Open: ", fb.fileName)
 	fb.file, err = os.Open(fb.fileName)
 	if err != nil {
 		fb.file = nil
