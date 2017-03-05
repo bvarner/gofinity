@@ -17,10 +17,10 @@ func main() {
 
 	flag.Parse()
 
-	var transceiver gofinity.BusTransceiver = nil
+	var transceiver gofinity.Transceiver = nil
 
 	if len(*serialPort) != 0 {
-		transceiver = gofinity.NewSerialBusTransceiver(*serialPort)
+		transceiver = gofinity.NewSerialTransceiver(*serialPort)
 	}
 	if len(*replayFile) != 0 {
 		transceiver = gofinity.NewFileBusReplayer(*replayFile)
@@ -37,7 +37,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	bus := gofinity.NewBusNode(transceiver)
+	bus := gofinity.NewBus(transceiver)
 	bus.Probe(func(frame *gofinity.Frame) {
 		log.Info("Got a frame!")
 	})

@@ -9,7 +9,7 @@ import (
 // Defines a callback for Bus Probing.
 type OnFrameReceived func(*Frame)
 
-// Constants for BusNode.status
+// Constants for Bus.status
 const (
 	READY    = uint8(0x00)
 	RUNNING  = uint8(0x01)
@@ -17,17 +17,17 @@ const (
 	INVALID  = uint8(0x03)
 )
 
-// BusNode defines frame-based interactions atop a BusTransceiver
-type BusNode struct {
+// Bus defines frame-based interactions atop a Transceiver
+type Bus struct {
 	waitGroup   sync.WaitGroup
-	transceiver BusTransceiver
+	transceiver Transceiver
 	probes      []OnFrameReceived
 	status      uint8
 }
 
-// Constructs a new BusNode for a BusTransciever
-func NewBusNode(transceiver BusTransceiver) (*BusNode) {
-	busNode := &BusNode{
+// Constructs a new Bus for a BusTransciever
+func NewBus(transceiver Transceiver) (*Bus) {
+	busNode := &Bus{
 		transceiver: transceiver,
 		probes:      []OnFrameReceived{},
 		waitGroup:   sync.WaitGroup{},
@@ -37,29 +37,29 @@ func NewBusNode(transceiver BusTransceiver) (*BusNode) {
 	return busNode
 }
 
-func (busNode *BusNode) Probe(received OnFrameReceived) {
-	busNode.probes = append(busNode.probes, received)
+func (bus *Bus) Probe(received OnFrameReceived) {
+	bus.probes = append(bus.probes, received)
 }
 
 // Internal read loop for reading Frames from the transceiver.
-func (busNode *BusNode) readLoop() {
-	log.Info("Starting BusNode.readLoop()")
-	defer log.Info("BusNode.readLoop() finished")
-	defer busNode.waitGroup.Done()
+func (bus *Bus) readLoop() {
+	log.Info("Starting Bus.readLoop()")
+	defer log.Info("Bus.readLoop() finished")
+	defer bus.waitGroup.Done()
 
 	frameBuf := []byte{}
 	readBuf := make([]byte, 256)
 
 	// If the transceiver is no longer valid, bail.
-	for busNode.status == RUNNING && busNode.transceiver.Valid() {
+	for bus.status == RUNNING && bus.transceiver.Valid() {
 		// If the transceiver isn't open, reset the framebuffer and (re)open.
-		if !busNode.transceiver.IsOpen() {
+		if !bus.transceiver.IsOpen() {
 			frameBuf = []byte{}
-			busNode.transceiver.Open()
+			bus.transceiver.Open()
 		}
 
 		// Try to read some bytes.
-		n, readErr := busNode.transceiver.Read(readBuf)
+		n, readErr := bus.transceiver.Read(readBuf)
 
 		// Append to the frame buffer the bytes we just read.
 		frameBuf = append(frameBuf, readBuf[:n]...)
@@ -80,7 +80,7 @@ func (busNode *BusNode) readLoop() {
 
 			frame, err := NewFrame(frameSlice)
 			if err == nil {
-				for _, probe := range busNode.probes {
+				for _, probe := range bus.probes {
 					probe(frame)
 				}
 
@@ -96,38 +96,38 @@ func (busNode *BusNode) readLoop() {
 
 		if readErr != nil {
 			log.Warn("Erorr reading : ", readErr)
-			busNode.transceiver.Close()
+			bus.transceiver.Close()
 		}
 	}
 
-	if !busNode.transceiver.Valid() {
-		busNode.status = INVALID
+	if !bus.transceiver.Valid() {
+		bus.status = INVALID
 		log.Info("Transceiver no longer valid for reading.")
 	}
 }
 
-// Starts the BusNode's I/O loops.
-func (busNode *BusNode) Start() error {
-	if busNode.status != READY {
-		return errors.New("BusNode not in 'READY' state.")
+// Starts the Bus's I/O loops.
+func (bus *Bus) Start() error {
+	if bus.status != READY {
+		return errors.New("Bus not in 'READY' state.")
 	}
-	busNode.status = RUNNING
+	bus.status = RUNNING
 
-	busNode.waitGroup.Add(1)
-	go busNode.readLoop()
+	bus.waitGroup.Add(1)
+	go bus.readLoop()
 
 	return nil
 }
 
-// Stops the BusNode's I/O loops.
+// Stops the Bus's I/O loops.
 // Blocks until all threads running for I/O terminate.
-func (busNode *BusNode) Shutdown() error {
-	if busNode.status != RUNNING || busNode.status != INVALID {
-		return errors.New("BusNode not 'RUNNING' or 'INVALID'.")
+func (bus *Bus) Shutdown() error {
+	if bus.status != RUNNING || bus.status != INVALID {
+		return errors.New("Bus not 'RUNNING' or 'INVALID'.")
 	}
-	busNode.status = STOPPING
-	busNode.waitGroup.Wait()
-	busNode.status = READY
+	bus.status = STOPPING
+	bus.waitGroup.Wait()
+	bus.status = READY
 
 	return nil
 }
