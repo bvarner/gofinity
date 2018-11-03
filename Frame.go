@@ -9,16 +9,32 @@ import (
 	"strconv"
 )
 
-const ACK = 0x06
-const READ_REQUEST = 0x0b
-const WRITE_REQUEST = 0x0c
-const ERROR = 0x15
+const ACK02 = 0x02
+const ACK06 = 0x06
+const READ_TABLE_BLOCK = 0x0b
+const WRITE_TABLE_BLOCK = 0x0c
+const CHANGE_TABLE_NAME = 0x10
+const NACK = 0x15
+const ALARM_PACKET = 0x1e
+const READ_OBJECT_DATA = 0x22
+const READ_VARIABLE = 0x62
+const WRITE_VARIABLE = 0x63
+const AUTO_VARIABLE = 0x64
+const READ_LIST = 0x75
 
 var Operations = map[uint8]string{
-	ACK:           "ACK",
-	READ_REQUEST:  "READ_REQUEST",
-	WRITE_REQUEST: "WRITE_REQUEST",
-	ERROR:         "ERROR",
+	ACK02:             "ACK02",
+	ACK06:             "ACK06",
+	READ_TABLE_BLOCK:  "READ",
+	WRITE_TABLE_BLOCK: "WRITE",
+	CHANGE_TABLE_NAME: "CHGTBN",
+	NACK:              "NACK",
+	ALARM_PACKET:      "ALARM",
+	READ_OBJECT_DATA:  "OBJRD",
+	READ_VARIABLE:     "RDVAR",
+	WRITE_VARIABLE:    "FORCE",
+	AUTO_VARIABLE:     "AUTO",
+	READ_LIST:         "LIST",
 }
 
 // A Frame Header
@@ -86,7 +102,7 @@ func NewProbeDeviceFrame(source uint16, destination uint16, exportIdx uint16, of
 		Header: Header{
 			Destination: destination,
 			Source:      source,
-			Operation:   READ_REQUEST,
+			Operation:   READ_TABLE_BLOCK,
 		},
 	}
 
